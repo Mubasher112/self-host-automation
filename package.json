@@ -4,11 +4,13 @@
   "private": true,
   "type": "module",
   "license": "MIT",
-  "engines": { "node": ">=22.5" },
+  "engines": {
+    "node": ">=22.5"
+  },
   "scripts": {
-    "dev": "node --experimental-sqlite src/server.js",
+    "dev": "node init && node --experimental-sqlite src/server.js",
     "worker": "node --experimental-sqlite src/worker.js",
-    "start": "node --experimental-sqlite src/server.js",
+    "start": "node init && node --experimental-sqlite src/server.js",
     "test": "node --experimental-sqlite --test tests/*.test.js",
     "check": "node --check src/server.js && node --check src/worker.js && node --check public/app.js"
   }
