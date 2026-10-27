@@ -6,13 +6,13 @@ A self-hosted visual workflow automation MVP for manual and webhook-triggered HT
 
 - Secure first-run administrator setup, sign-in/out, HttpOnly sessions, CSRF checks, and login throttling
 - One server-authorized workspace per initial administrator (single-user MVP)
-- Visual directed-acyclic workflow builder with draggable nodes
-- Manual and authenticated-ready webhook triggers
+- Visual directed-acyclic workflow builder with draggable, reconnectable, duplicable nodes
+- Manual and webhook triggers with rotatable, one-time-display webhook secrets
 - HTTP request and safe JSON mapping nodes
 - Draft revisions, graph validation, immutable published versions, activation/deactivation API
 - SQLite-backed queue and a separate worker process
 - Execution and step-attempt history with timings, inputs, outputs, and errors
-- API-key and bearer-token credentials encrypted with AES-256-GCM
+- API-key and bearer-token credentials encrypted with AES-256-GCM, with replacement and guarded deletion
 - Private/link-local outbound HTTP blocking by default, timeouts, redirect blocking, request limits, and security headers
 - Docker Compose deployment, health endpoint, tests, and open-source project files
 
@@ -91,7 +91,7 @@ Missing paths fail the step with a useful error. Ordinary outputs cannot access 
 - The MVP is single-user/single-workspace. It enforces workspace IDs server-side but does not claim tested multi-tenant isolation.
 - Secrets are AES-256-GCM encrypted. `ENCRYPTION_KEY` stays outside SQLite. Back up the key separately; losing it makes credentials unrecoverable. Rotate by decrypting/re-encrypting every record during a maintenance window (no automated rotation yet).
 - Private, loopback, link-local, and metadata-range destinations are blocked by default after DNS resolution. Redirects are not followed. Set `ALLOW_PRIVATE_NETWORK=true` only for a trusted, isolated instance; this weakens SSRF protection. DNS rebinding defenses are not complete enough for hostile multi-user deployments.
-- The webhook URL contains an unguessable identifier. The schema supports a hashed secret, but secret-management UI is deferred; place an authenticating reverse proxy in front of exposed webhooks.
+- Webhook URLs contain an unguessable identifier. Create a secret from the webhook node inspector and copy it immediately; only its SHA-256 digest is stored. Callers send it as `X-FlowForge-Secret`. Use an authenticating reverse proxy as additional defense for internet-facing endpoints.
 - Workflow payloads are retained without an automatic expiry in this MVP. They may contain sensitive data. Restrict volume access and delete/rotate the database according to your policy.
 - Containers run as a non-root user. This is defense-in-depth, not a security audit. Review dependencies, proxy configuration, network policy, and host isolation before public exposure.
 
@@ -109,9 +109,11 @@ All `/api/*` routes except health, setup status, setup, and login require the se
 | POST | `/api/workflows/:id/validate` | Validate graph |
 | POST | `/api/workflows/:id/publish` | Publish immutable version |
 | POST | `/api/workflows/:id/run` | Queue manual execution |
+| POST/DELETE | `/api/workflows/:id/webhook-secret` | Rotate/remove webhook secret |
 | POST | `/hooks/:key` | Queue webhook execution |
 | GET | `/api/executions`, `/api/executions/:id` | Execution history/detail |
 | GET/POST | `/api/credentials` | List masked metadata/create encrypted secret |
+| PUT/DELETE | `/api/credentials/:id` | Replace or delete a credential |
 
 API shape is experimental until v1. Lists are capped at 100 executions; cursor pagination is planned.
 
@@ -128,12 +130,12 @@ npm test
 npm run check
 ```
 
-Tests cover graph restrictions, cycle detection, safe mapping, password hashing, credential authenticated encryption, redaction, and database migrations.
+The suite covers authenticated setup and CSRF enforcement, draft validation, immutable version pinning, trigger-type enforcement, authenticated webhooks, graph restrictions, cycle detection, a real worker execution against a local HTTP service, safe mapping, password hashing, credential authenticated encryption, secret redaction, and database migrations.
 
 ## Roadmap
 
 1. Schedule trigger, conditions, manual retry warnings, cancellation checkpoints, SMTP test sink, retention settings.
-2. Webhook secret UI, idempotency keys, credential update/delete impact analysis, richer audit screen, import/export without secrets.
+2. Idempotency keys, richer credential dependency analysis, audit-history UI, and import/export without secrets.
 3. PostgreSQL plus leased queue, multi-user roles/invitations with isolation tests, metrics, plugin SDK and signed integrations.
 4. High availability, sandboxed code nodes, parallel branches, human approvals, enterprise identity.
 

@@ -6,4 +6,5 @@ test('starter workflow is valid',()=>assert.deepEqual(validateGraph(template()).
 test('workflow rejects cycles',()=>{const g=template();g.edges.push({id:'back',from:'action',to:'trigger'});assert.match(validateGraph(g).errors.join(' '),/cycle|trigger/i)});
 test('workflow requires exactly one trigger',()=>{const g=template();g.nodes.push({id:'second',type:'webhook',name:'Webhook',config:{}});assert.match(validateGraph(g).errors.join(' '),/Exactly one/)});
 test('workflow rejects disconnected actions',()=>{const g=template();g.edges=[];assert.match(validateGraph(g).errors.join(' '),/not connected/)});
+test('workflow rejects edges that reference missing nodes',()=>{const g=template();g.edges.push({id:'bad',from:'missing',to:'action'});assert.match(validateGraph(g).errors.join(' '),/existing node/)});
 test('mapping resolves only explicit data paths',()=>{const result=resolveTemplate({email:'{{trigger.customer.email}}',run:'{{execution.id}}'},{trigger:{customer:{email:'a@example.com'}},execution:{id:'exe_1'}});assert.deepEqual(result,{email:'a@example.com',run:'exe_1'});assert.throws(()=>resolveTemplate('{{process.env.SECRET}}',{}),/Missing value/)});
