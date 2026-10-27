@@ -1,0 +1,25 @@
+services:
+  web:
+    build: .
+    restart: unless-stopped
+    ports: ["4080:4080"]
+    environment:
+      NODE_ENV: production
+      DATABASE_PATH: /app/data/flowforge.db
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?Set ENCRYPTION_KEY in .env}
+      SECURE_COOKIES: ${SECURE_COOKIES:-false}
+      ALLOW_PRIVATE_NETWORK: ${ALLOW_PRIVATE_NETWORK:-false}
+    volumes: ["flowforge-data:/app/data"]
+  worker:
+    build: .
+    restart: unless-stopped
+    command: ["node", "--experimental-sqlite", "src/worker.js"]
+    environment:
+      NODE_ENV: production
+      DATABASE_PATH: /app/data/flowforge.db
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?Set ENCRYPTION_KEY in .env}
+      ALLOW_PRIVATE_NETWORK: ${ALLOW_PRIVATE_NETWORK:-false}
+    volumes: ["flowforge-data:/app/data"]
+    depends_on: [web]
+volumes:
+  flowforge-data:
